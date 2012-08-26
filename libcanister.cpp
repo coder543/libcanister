@@ -156,6 +156,7 @@ int libcanister::canister::close ()
         i++;
     }
     #warning "Need to implement TOC output."
+    readonly = true;
     return 0;
 }
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+#Build and Run (bar)
+
 clear
 echo "      Building libcanister"
 
@@ -14,4 +16,4 @@ echo "      Running  canisterdemo" &&
 echo "" &&
 echo "=====================================" &&
 
-./canidemo.bin 
+sleep 1; rm ./canidemo.bin & ./canidemo.bin
