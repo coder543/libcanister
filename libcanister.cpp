@@ -170,6 +170,7 @@ int libcanister::canister::open()
     TOC.cachestate = 1;
     TOC.cfid = -1;
     TOC.dsize = 0;
+    cachemax = 25;
     if (!infile.is_open())
     {
         info.internalname = canmem::null();
