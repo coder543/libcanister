@@ -132,6 +132,11 @@ void libcanister::canister::cacheclean (int sCFID, bool dFlush)
         cacheclean(sCFID, true);
 }
 
+libcanister::canister::~canister()
+{
+    close();
+}
+
 //flushes all caches and prepares for deletion
 int libcanister::canister::close ()
 {

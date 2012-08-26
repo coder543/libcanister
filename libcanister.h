@@ -72,6 +72,7 @@ namespace libcanister
         //accepts a physical location
         canister (canmem fspath);
         canister (char* fspath);
+        ~canister();
         
         //open the fspath
         //does it exist?
