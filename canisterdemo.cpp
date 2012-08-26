@@ -22,6 +22,10 @@ int main()
 	    char theFile[1024];
 	    cout << "Enter filename: ";
 	    cin >> theFile;
-	    cout << demo.getFile(cStr(theFile)).data.data << endl;
+        if (theFile[0] == '/')
+            cout << demo.getFile(cStr(theFile)).data.data << endl;
+        else
+            break;
 	}
+    demo.close();
 }

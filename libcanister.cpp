@@ -126,17 +126,21 @@ void libcanister::canister::cacheclean (int sCFID, bool dFlush)
                 files[i].cachestate = 0;
             }
         }
+        i++;
     }
-    if (!dFlush && cachecnt > cachemax)
+    if (!dFlush && cachecnt > cachemax && !readonly)
         cacheclean(sCFID, true);
 }
 
 //flushes all caches and prepares for deletion
 int libcanister::canister::close ()
 {
+    if (readonly)
+        return 0;
     int i = 0;
-    while (i < info.numfiles && cachecnt > cachemax)
+    while (i < info.numfiles)
     {
+        cout << files[i].cachestate << endl;
         if (files[i].cachestate == 2)
             files[i].cachedump();
         else
@@ -144,9 +148,10 @@ int libcanister::canister::close ()
             files[i].data = canmem::null();
             files[i].cachestate = 0;
         }
+        i++;
     }
     #warning "Need to implement TOC output."
-    return 1;
+    return 0;
 }
 
 int libcanister::canister::open()
