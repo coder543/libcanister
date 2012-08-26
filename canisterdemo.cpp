@@ -19,13 +19,13 @@ int main()
     cout << demo.getTOC().data.data << endl;
     while (true)
     {
-	    char theFile[1024];
-	    cout << "Enter filename: ";
-	    cin >> theFile;
+        char theFile[1024];
+        cout << "Enter filename: ";
+        cin >> theFile;
         if (theFile[0] == '/')
             cout << demo.getFile(cStr(theFile)).data.data << endl;
         else
             break;
-	}
+    }
     demo.close();
 }

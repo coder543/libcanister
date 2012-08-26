@@ -2,7 +2,7 @@
 
 class bzipWrapper
 {
-	public:
-	static libcanister::canmem compress(libcanister::canmem &rawdata);
-	static libcanister::canmem inflate(libcanister::canmem &compdata);
+    public:
+    static libcanister::canmem compress(libcanister::canmem &rawdata);
+    static libcanister::canmem inflate(libcanister::canmem &compdata);
 };
