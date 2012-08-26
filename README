@@ -1,0 +1,39 @@
+===============================
+          DESCRIPTION
+===============================
+
+Canister is a format designed to create a very fast archive format for large
+quantities of files. The fundamental principle is that each file is compressed by
+itself so that retrieval does not cost the time that the inflation of an entire
+archive would. Files can be individually handled as on a normal filesystem.
+
+Among the benefits of a semi-compressed archive file system that can be modified in
+real time with changes cached and flushed as hardware and software constraints desire,
+there are also a handful of detriments.
+
+The obvious one is that compression will not be nearly as effective as it would be if
+the whole archive were being compressed as one. The more subtle problem is that
+editing a file in place will naturally generate fragmentation (as we do NOT rewrite
+the whole archive just to edit one file). The fragmented sections will be repurposed
+when possible, but otherwise will sit empty unless a clone of the archive is made (
+whereupon the fragments will be discarded) using the canister function that creates
+the clone.
+
+Canisters are geared for speed in every aspect of their design, this speed comes at
+the cost of marginal efficiency in other respects, but it should result in a net
+savings of disk space, particularly in lightly edited canisters.
+
+===============================
+            HACKING
+===============================
+
+Whenever you make changes to the code, the shell script "bar.sh" is the
+makefile-equivalent in use here. Just run bar.sh and it will generate and execute a
+new binary for your testing. It automatically cleans up, so if you want to keep the
+binary file, you'll have to edit the final line of the script. If you make the code better, I'd be happy to merge your changes into the master.
+
+===============================
+            CONTACT
+===============================
+
+The primary developer behind the canister project is Josh Leverette. You may contact him on GMail, where his account is coder543.
