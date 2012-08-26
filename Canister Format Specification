@@ -1,0 +1,39 @@
+vn bytes is shorthand for 'variable number' of bytes
+
+chunk ID    chunk size  chunk type  chunk description
+  --header block--
+c00        05 bytes    string      header for file type verification
+c01        04 bytes    int         number of files
+c11		   08 bytes    long        footer block offset
+c07        01 bytes    char        signals end of the header block
+  --data block--
+c08        04 bytes    int         file ID
+c09        vn bytes    raw data    contains the raw bzip2 compressed data of file ID
+  --fragment block--
+c10 	   vn bytes    fragment	   optional -- a value of 255 as the first value of
+							 	   a c08 chunk means we have a data fragment. All values
+							 	   inside the fragment will be 255, followed by a 0x02
+							 	   at the end of the fragmented zone. These can be caused
+							 	   by replacing a file with a larger one or even a
+							 	   smaller one.
+  --footer block--
+c00        05 bytes    string      header for file type verification
+c02        vn bytes    string      name of this canister
+c03        01 bytes    char        signals beginning of a file definition
+c04        08 bytes    long        data size of file
+c05        04 bytes    int         file ID
+c06        vn bytes    string      file path (name)
+c07        01 bytes    char        signals end of the header block
+
+hardcoded chunk values:
+chunk ID    chunk value
+c00        0x0163616E01
+c03        0x01
+c07        0x03
+
+all string-type chunks end with a byte of value 0x02
+
+Additional notes:
+chunks c03 through c06 repeat for [value of chunk c01] times
+chunks c08 and c09 repeat for [value of chunk c01] times as well
+
