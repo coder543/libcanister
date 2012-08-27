@@ -37,7 +37,7 @@ void libcanister::canmem::countlen()
 {
     int i = -1;
     while (data[++i] != 0)
-        ;
+        ; //loop until the very end of this data block
     size = ++i;
 }
 

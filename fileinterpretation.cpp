@@ -1,6 +1,8 @@
 //just some helper functions to assist in standardized
 //interpretation of the canister file
 #include "fileinterpretation.h"
+
+//reads a 0x02-limited string of maximum length 512 from infile
 libcanister::canmem readstr(ifstream& infile)
 {
     int i = 1;
@@ -17,8 +19,7 @@ libcanister::canmem readstr(ifstream& infile)
     return intername;
 }
 
-
-
+//reads a 32-bit integer from the infile stream
 unsigned int readint32(ifstream& infile)
 {
     unsigned char temp;
@@ -43,6 +44,7 @@ unsigned int readint32(ifstream& infile)
     return result;
 }
 
+//similarly, reads a 64-bit integer from the infile stream
 int64 readint64(ifstream& infile)
 {
     unsigned char temp;
