@@ -12,10 +12,9 @@ int main()
     // cin >> theFile;
     // canister demo = *(new canister(theFile));
     demo.open();
-    canfile important = demo.getFile(cStr("/ImportantInfo"));
-    important.data = cStr("This here niftyness.");
-    important.path = cStr("/NotSoCoolInfo");
-    demo.writeFile(important);
+    canmem data = cStr("This here be some niftyness.");
+    canmem path = cStr("/ANotSoCoolInfo");
+    demo.writeFile(path, data);
     cout << demo.getTOC().data.data << endl;
     while (true)
     {

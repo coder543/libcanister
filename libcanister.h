@@ -32,7 +32,7 @@ namespace libcanister
         canmem(char* strdata); //automates the creation of zero-limited canmems
         ~canmem(); //cleans up the canmem
         void zeromem(); //overwrites this canmem
-        void countlen(); //counts length of zero-limited strings
+        void countlen(); //counts length of zero-limited strings and stores it in size
         static canmem null(); //returns a singleton null canmem
         
     };
@@ -64,6 +64,7 @@ namespace libcanister
                         //-1 = error, check the data for the message
         void cache(); //pull the file from disk and cache it in memory
         void cachedump(); //deletes the contents of this file from the memory cache after assuring the on disk copy is up to date
+        void cachedumpfinal(fstream& infile); //same as cachedump, but more efficient during closing procedures
         void flush(); //updates the on disk copy, but retains the memory cache
     };
 
@@ -78,13 +79,13 @@ namespace libcanister
         //use or for their own.
         //contains a newline-delimited list of files in the container.
         canfile TOC;
-        bool readonly; //if true then no write routines will do anything
     public:
         caninfo info; //the general info about this canister
 
         //the raw canfiles -- recommended that programs do not modify
         //these files directly, but not enforced.
         canfile* files;
+        bool readonly; //if true then no write routines will do anything
         
         //maximum number of files to have in memory at any given
         //time, change this to whatever suits your application.

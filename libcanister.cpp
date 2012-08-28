@@ -57,6 +57,7 @@ bool libcanister::canister::writeFile(canmem path, canmem data)
     wrapper.data = data;
     wrapper.cfid = -1;
     wrapper.dsize = -1;
+    wrapper.isfrag = 0;
     wrapper.cachestate = 2;
     wrapper.parent = this;
     writeFile(wrapper);
@@ -112,6 +113,8 @@ bool libcanister::canister::writeFile(canfile file)
     file.cfid = ++info.numfiles;
     //mark it to be in need of flushing
     file.cachestate = 2;
+    //it isn't a fragment
+    file.isfrag = 0;
     //then we rebuild the array to be one larger
     canfile* newSet = new canfile[info.numfiles];
     //copy the old into the new
@@ -172,25 +175,100 @@ int libcanister::canister::close ()
     //don't do anything if readonly
     if (readonly)
         return 0;
+
+    canmem fspath = info.path;
+    fstream infile;
+    infile.open(fspath.data, ios::in | ios::out | ios::binary);
+
+    //write the header verification (c00)
+    unsigned char temp1, temp2, temp3, temp4, temp5;
+    temp1 = 0x01;
+    temp2 = 'c';
+    temp3 = 'a';
+    temp4 = 'n';
+    temp5 = 0x01;
+
+    infile << temp1;
+    infile << temp2;
+    infile << temp3;
+    infile << temp4;
+    infile << temp5;
+
+
+    //write the new file count (filect) (c01)
+    unsigned char* filect = (unsigned char*)(void*)&info.numfiles;
+    infile << filect[3];
+    infile << filect[2];
+    infile << filect[1];
+    infile << filect[0];
+    infile.seekg(14, ios::beg); //seek to file section
     int i = 0;
     //otherwise, loop through the files
     while (i < info.numfiles)
     {
         //dout << files[i].cachestate << endl;
-
-        //dump the ones that need dumping
-        if (files[i].cachestate == 2)
-            files[i].cachedump();
-        else
-        {
-            //and delete the ones which are already up to date
-            files[i].data = canmem::null();
-            files[i].cachestate = 0;
-        }
+        files[i].cachedumpfinal(infile);
+        files[i].data = canmem::null();
+        files[i].cachestate = 0;
         i++;
     }
     //here we rewrite the footer to represent the latest changes to the canister
-    #warning "Need to write footer."
+    #warning "Need to write footerloc."
+
+    // int footerloc = something wise;
+    // infile.seekg(9, ios::beg); //go back to header
+    // write the new footerloc into place (c11)
+    // unsigned char* ftloc = (unsigned char*)(void*)&footerloc;
+    // infile << ftloc[3];
+    // infile << ftloc[2];
+    // infile << ftloc[1];
+    // infile << ftloc[0];
+    // infile << (unsigned char)0x03; //c07
+    // infile.seekg(footerloc, ios::beg); //reset back to footer
+
+    //write footer verification (c00)
+    infile << temp1;
+    infile << temp2;
+    infile << temp3;
+    infile << temp4;
+    infile << temp5;
+
+    //c02
+    infile.write(info.internalname.data, info.internalname.size);
+    infile << (unsigned char)0x02;
+
+    i = 0;
+    while (i < info.numfiles)
+    {
+        //c03
+        infile << (unsigned char)0x01;
+
+        //c04
+        unsigned char* sizeout = (unsigned char*)(void*)&files[i].dsize;
+        infile << sizeout[7];
+        infile << sizeout[6];
+        infile << sizeout[5];
+        infile << sizeout[4];
+        infile << sizeout[3];
+        infile << sizeout[2];
+        infile << sizeout[1];
+        infile << sizeout[0];
+        cout << "file size: " << files[i].dsize << endl;
+
+        //c05
+        unsigned char* id = (unsigned char*)(void*)&files[i].cfid;
+        infile << id[3];
+        infile << id[2];
+        infile << id[1];
+        infile << id[0];
+
+        //c06
+        infile.write(files[i].path.data, files[i].path.size);
+
+        i++;
+    }
+
+    infile << (unsigned char)0x03; //c07
 
     //no other modifications to the canister should happen after this point
     //also prevents double closure from a manual close() call and the automated one
@@ -236,13 +314,14 @@ int libcanister::canister::open()
         infile >> temp3;
         infile >> temp4;
         infile >> temp5;
-        //does the header match?
+        //does the header match? (c00)
         if ((temp1 == 0x01) && (temp2 == 'c') && (temp3 == 'a') && (temp4 == 'n') && (temp5 == 0x01))
         {   //yes, valid header
             dout << "valid header" << endl;
             //read in the number of files
             info.numfiles = readint32(infile);
             dout << "numfiles: " << info.numfiles << endl;
+            #warning "technically this should be a readint64, but seekg won't accept the 64-bit int. Solution needed."
             int footerloc = readint32(infile);
             infile.seekg(footerloc, ios::beg);
             //does the footer match?
@@ -252,7 +331,7 @@ int libcanister::canister::open()
             infile >> temp4;
             infile >> temp5;
             if ((temp1 == 0x01) && (temp2 == 'c') && (temp3 == 'a') && (temp4 == 'n') && (temp5 == 0x01))
-            {   //yes, valid footer
+            {   //yes, valid footer (c00)
                 //create a file array to hold the files
                 files = new canfile[info.numfiles];
                 //set the internal name of the canister

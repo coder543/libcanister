@@ -4,7 +4,7 @@ chunk ID    chunk size  chunk type  chunk description
   --header block--
 c00        05 bytes    string      header for file type verification
 c01        04 bytes    int         number of files
-c11		   08 bytes    long        footer block offset
+c11		   04 bytes    int         footer block offset
 c07        01 bytes    char        signals end of the header block
   --data block--
 c08        04 bytes    int         file ID
@@ -31,9 +31,12 @@ c00        0x0163616E01
 c03        0x01
 c07        0x03
 
-all string-type chunks end with a byte of value 0x02
+-- all string-type chunks end with a byte of value 0x02
+-- all numeric values are stored with the byte of greatest
+   significance first.
 
 Additional notes:
 chunks c03 through c06 repeat for [value of chunk c01] times
 chunks c08 and c09 repeat for [value of chunk c01] times as well
+!!!! chunk c11 REALLY needs to be a long of 8 bytes, but seekg constraints limit this.
 
