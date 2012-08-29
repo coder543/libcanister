@@ -41,6 +41,15 @@ void libcanister::canmem::countlen()
     size = ++i;
 }
 
+void libcanister::canmem::trim()
+{
+    //handle some funkyness. (specifically, the last two bytes of the file, 0x0203, would get duplicated once.)
+    if (size < 1)
+        return;
+    while ((data[size-1] == 0x00 || data[size-1] == 0x02 || data[size-1] == 0x03) && size > 1)
+        size--;
+}
+
 libcanister::canmem libcanister::canmem::null()
 {
     static canmem nullguy;

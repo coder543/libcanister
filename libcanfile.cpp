@@ -17,9 +17,7 @@ void libcanister::canfile::cache()
         infile.open(parent->info.path.data);
         int i = 0;
         char tmp = 0;
-        //seek to the end of the header
-        while (tmp != 0x03)
-            infile >> tmp;
+        infile.seekg(14, ios::beg); //seek to file section
         //loop through the files
         while (i < parent->info.numfiles)
         {
@@ -59,7 +57,7 @@ void libcanister::canfile::cache()
         }
         else
         { //otherwise we have a problem
-            cout << "Error: canister is corrupt." << endl;
+            cout << "Error: canister is corrupt. CFID Code: " << id << ":" << cfid << endl;
             cachestate = -1;
             data = *(new canmem((char*)"Sorry -- canister is corrupted somehow."));
         }
@@ -76,9 +74,7 @@ void libcanister::canfile::cachedump()
         infile.open(parent->info.path.data, ios::in | ios::out | ios::binary);
         int i = 0;
         char tmp = 0;
-        //seek to the end of the header
-        while (tmp != 0x03)
-            infile >> tmp;
+        infile.seekg(14, ios::beg); //seek to file section
         //loop through the files
         while (i < parent->info.numfiles)
         {
@@ -88,31 +84,46 @@ void libcanister::canfile::cachedump()
             //readint32 (needed because fstream != ifstream)
             unsigned char temp;
             unsigned int id = 0;
-            
-            infile >> temp;
-            id = temp * 256 * 256 * 256;
-            dout << (int)temp << " ";
-            
-            infile >> temp;
-            id += temp * 256 * 256;
-            dout << (int)temp << " ";
-            
-            infile >> temp;
-            id += temp * 256;
-            dout << (int)temp << " ";
-            
-            infile >> temp;
-            id += temp;
-            dout << (int)temp << " ";
+            if (!infile.good())
+            {
+                infile >> temp;
+                id = temp * 256 * 256 * 256;
+                dout << (int)temp << " ";
+                
+                infile >> temp;
+                id += temp * 256 * 256;
+                dout << (int)temp << " ";
+                
+                infile >> temp;
+                id += temp * 256;
+                dout << (int)temp << " ";
+                
+                infile >> temp;
+                id += temp;
+                dout << (int)temp << " ";
 
-            if (parent->files[i].cfid == cfid && cfid == id)
-            {
-                infile.write(cmpdata.data, cmpdata.size);
-                break;
+                if (parent->files[i].cfid == cfid && cfid == id)
+                {
+                    infile.write(cmpdata.data, cmpdata.size);
+                    break;
+                }
+                else if (parent->files[i].cfid != id)
+                {
+                    infile.seekg(-4, ios::cur);
+                    dout << "writing new file" << endl;
+
+                    unsigned char* id = (unsigned char*)(void*)&cfid;
+                    infile << id[3];
+                    infile << id[2];
+                    infile << id[1];
+                    infile << id[0];
+
+                    infile.write(cmpdata.data, cmpdata.size);
+                    break;
+                }
             }
-            else if (parent->files[i].cfid != id)
+            else
             {
-                infile.seekg(-4, ios::cur);
                 dout << "writing new file" << endl;
 
                 unsigned char* id = (unsigned char*)(void*)&cfid;
@@ -143,30 +154,44 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
         dsize = cmpdata.size;
         //int id = readint32(infile);
         //readint32 (needed because fstream != ifstream)
-        unsigned char temp;
-        unsigned int id = 0;
-        
-        infile >> temp;
-        id = temp * 256 * 256 * 256;
-        dout << (int)temp << " ";
-        
-        infile >> temp;
-        id += temp * 256 * 256;
-        dout << (int)temp << " ";
-        
-        infile >> temp;
-        id += temp * 256;
-        dout << (int)temp << " ";
-        
-        infile >> temp;
-        id += temp;
-        dout << (int)temp << " ";
-
-        if (cfid == id)
-            infile.write(cmpdata.data, cmpdata.size);
-        else if (cfid != id)
+        if (!infile.good())
         {
-            infile.seekg(-4, ios::cur);
+            unsigned char temp;
+            unsigned int id = 0;
+            
+            infile >> temp;
+            id = temp * 256 * 256 * 256;
+            dout << (int)temp << " ";
+            
+            infile >> temp;
+            id += temp * 256 * 256;
+            dout << (int)temp << " ";
+            
+            infile >> temp;
+            id += temp * 256;
+            dout << (int)temp << " ";
+            
+            infile >> temp;
+            id += temp;
+            dout << (int)temp << " ";
+            if (cfid == id)
+                infile.write(cmpdata.data, cmpdata.size);
+            else if (cfid != id)
+            {
+                infile.seekg(-4, ios::cur);
+                dout << "writing new file" << endl;
+
+                unsigned char* id = (unsigned char*)(void*)&cfid;
+                infile << id[3];
+                infile << id[2];
+                infile << id[1];
+                infile << id[0];
+
+                infile.write(cmpdata.data, cmpdata.size);
+            }
+        }
+        else
+        {
             dout << "writing new file" << endl;
 
             unsigned char* id = (unsigned char*)(void*)&cfid;
@@ -174,7 +199,6 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
             infile << id[2];
             infile << id[1];
             infile << id[0];
-
             infile.write(cmpdata.data, cmpdata.size);
         }
     }

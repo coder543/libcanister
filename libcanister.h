@@ -33,6 +33,7 @@ namespace libcanister
         ~canmem(); //cleans up the canmem
         void zeromem(); //overwrites this canmem
         void countlen(); //counts length of zero-limited strings and stores it in size
+        void trim(); //removes any nulls from the end of the string
         static canmem null(); //returns a singleton null canmem
         
     };

@@ -178,8 +178,10 @@ int libcanister::canister::close ()
 
     canmem fspath = info.path;
     fstream infile;
-    infile.open(fspath.data, ios::in | ios::out | ios::binary);
-
+    infile.open(fspath.data, ios::in | ios::out | ios::app | ios::binary);
+    if (!infile.is_open())
+        cout << "Whoa there.." << endl;
+    infile.seekg(0, ios::beg);
     //write the header verification (c00)
     unsigned char temp1, temp2, temp3, temp4, temp5;
     temp1 = 0x01;
@@ -201,6 +203,12 @@ int libcanister::canister::close ()
     infile << filect[2];
     infile << filect[1];
     infile << filect[0];
+
+    //make sure there is a footerloc (c11) in some form.
+    infile << (unsigned char)0xFF;
+    infile << (unsigned char)0xFF;
+    infile << (unsigned char)0xFF;
+    infile << (unsigned char)0xFF;
     infile.seekg(14, ios::beg); //seek to file section
     int i = 0;
     //otherwise, loop through the files
@@ -215,25 +223,26 @@ int libcanister::canister::close ()
     //here we rewrite the footer to represent the latest changes to the canister
     #warning "Need to write footerloc."
 
-    // int footerloc = something wise;
-    // infile.seekg(9, ios::beg); //go back to header
-    // write the new footerloc into place (c11)
-    // unsigned char* ftloc = (unsigned char*)(void*)&footerloc;
-    // infile << ftloc[3];
-    // infile << ftloc[2];
-    // infile << ftloc[1];
-    // infile << ftloc[0];
-    // infile << (unsigned char)0x03; //c07
-    // infile.seekg(footerloc, ios::beg); //reset back to footer
+    int footerloc = infile.tellg();
+    infile.seekg(9, ios::beg); //go back to header
+    //write the new footerloc into place (c11)
+    unsigned char* ftloc = (unsigned char*)(void*)&footerloc;
+    infile << ftloc[3];
+    infile << ftloc[2];
+    infile << ftloc[1];
+    infile << ftloc[0];
+    infile << (unsigned char)0x03; //c07
+    infile.seekg(footerloc, ios::beg); //reset back to footer
 
     //write footer verification (c00)
-    infile << temp1;
-    infile << temp2;
-    infile << temp3;
-    infile << temp4;
-    infile << temp5;
+    // infile << temp1;
+    // infile << temp2;
+    // infile << temp3;
+    // infile << temp4;
+    // infile << temp5;
 
     //c02
+    info.internalname.trim();
     infile.write(info.internalname.data, info.internalname.size);
     infile << (unsigned char)0x02;
 
@@ -263,7 +272,9 @@ int libcanister::canister::close ()
         infile << id[0];
 
         //c06
+        files[i].path.trim();
         infile.write(files[i].path.data, files[i].path.size);
+        infile << (unsigned char)0x02;
 
         i++;
     }
@@ -293,7 +304,7 @@ int libcanister::canister::open()
     //skeletal initialization of the canister
     if (!infile.is_open())
     {
-        info.internalname = canmem::null();
+        info.internalname = *(new canmem((char*)"generic canister"));
         info.numfiles = 0;
         canmem tocData;
         tocData.data = (char*)"";
@@ -378,7 +389,9 @@ int libcanister::canister::open()
                     memcpy(tocRaw, tmp, tLen);
                     memcpy(tocRaw + tLen, files[i].path.data, files[i].path.size);
                     tocRaw[tocLen-1] = '\n';
-                    //dout << "tocRaw:" << endl << "\"" << tocRaw << "\"" << endl;
+                    // cout << "newFile: " << files[i].path.data << endl;
+                    // cout << "tocLen: " << tocLen << endl;
+                    // cout << "tocRaw:" << endl << "\"" << tocRaw << "\"" << endl;
 
                     //read the next file
                     i++;
@@ -386,9 +399,10 @@ int libcanister::canister::open()
                 }
                 if (temp1 != 0x03)
                 {
-                    cerr << "Corrupted Canister! Error message: Incomplete file table! Data: " << (unsigned int)temp1 << endl;
+                    cerr << "Corrupted Canister! Error message: Incomplete file table! Data: " << (unsigned int)temp1 << " " << infile.tellg() << endl;
                     return -1;
                 }
+                tocRaw[tocLen] = 0x00;
                 canmem tocDat = *(new canmem(tocLen));
                 tocDat.data = tocRaw;
                 TOC.data = tocDat;

@@ -4,13 +4,9 @@ using namespace libcanister;
 int main()
 {
     canmem location;
-    location.data = (char*)"candemo";
+    location.data = (char*)"candemocmp";
     location.countlen();
     canister demo = *(new canister(location));
-    // char theFile[1024];
-    // cout << "Enter filename: ";
-    // cin >> theFile;
-    // canister demo = *(new canister(theFile));
     demo.open();
     canmem data = cStr("This here be some niftyness.");
     canmem path = cStr("/ANotSoCoolInfo");
