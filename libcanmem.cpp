@@ -28,9 +28,18 @@ libcanister::canmem::~canmem()
 void libcanister::canmem::zeromem()
 {
     int i = -1;
-    return;
     while (++i < size)
         data[i] = 0;
+}
+
+void libcanister::canmem::fragmem()
+{
+    if (size <= 0)
+        return;
+    int i = -1;
+    while (++i < size)
+        data[i] = 255;
+    data[i-1] = 0x02;
 }
 
 void libcanister::canmem::countlen()

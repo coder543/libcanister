@@ -69,7 +69,12 @@ void libcanister::canfile::cachedump()
     //#warning "Need to implement cachedump."
     if (cachestate == 2 && !parent->readonly) //time to dump the cache
     {
-        canmem cmpdata = bzipWrapper::compress(data);
+        canmem cmpdata;
+        if (!isfrag)
+            cmpdata = bzipWrapper::compress(data);
+        else
+            cmpdata = data;
+        dsize = cmpdata.size;
         fstream infile;
         infile.open(parent->info.path.data, ios::in | ios::out | ios::binary);
         int i = 0;
@@ -150,7 +155,11 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
 
     if (cachestate == 2 && !parent->readonly) //time to dump the cache
     {
-        canmem cmpdata = bzipWrapper::compress(data);
+        canmem cmpdata;
+        if (!isfrag)
+            cmpdata = bzipWrapper::compress(data);
+        else
+            cmpdata = data;
         dsize = cmpdata.size;
         //int id = readint32(infile);
         //readint32 (needed because fstream != ifstream)

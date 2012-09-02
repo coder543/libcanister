@@ -32,6 +32,7 @@ namespace libcanister
         canmem(char* strdata); //automates the creation of zero-limited canmems
         ~canmem(); //cleans up the canmem
         void zeromem(); //overwrites this canmem
+        void fragmem(); //overwrites this canmem with fragment notation
         void countlen(); //counts length of zero-limited strings and stores it in size
         void trim(); //removes any nulls from the end of the string
         static canmem null(); //returns a singleton null canmem

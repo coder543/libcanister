@@ -25,6 +25,28 @@ libcanister::canfile libcanister::canister::getTOC()
     return TOC;
 }
 
+int libcanister::canister::delFile(canmem path)
+{
+    int i = 0;
+    //search for the file
+    while (i < info.numfiles)
+    {
+        //if we found it
+        if(!strcmp(files[i].path.data, path.data))
+        {
+            files[i].data.fragmem();
+            files[i].cachestate = 2;
+            files[i].isfrag = 1;
+            files[i].cfid += 0xFF000000;
+            files[i].path.data = (char*)"FRAGMENT";
+            files[i].path.countlen();
+            return 0;
+        }
+        i++;
+    }
+    return -1;
+}
+
 libcanister::canfile libcanister::canister::getFile(canmem path)
 {
     int i = 0;
@@ -178,7 +200,7 @@ int libcanister::canister::close ()
 
     canmem fspath = info.path;
     fstream infile;
-    infile.open(fspath.data, ios::in | ios::out | ios::app | ios::binary);
+    infile.open(fspath.data, ios::in | ios::out | ios::binary);
     if (!infile.is_open())
         cout << "Whoa there.." << endl;
     infile.seekg(0, ios::beg);
@@ -221,25 +243,15 @@ int libcanister::canister::close ()
         i++;
     }
     //here we rewrite the footer to represent the latest changes to the canister
-    #warning "Need to write footerloc."
-
     int footerloc = infile.tellg();
-    infile.seekg(9, ios::beg); //go back to header
-    //write the new footerloc into place (c11)
-    unsigned char* ftloc = (unsigned char*)(void*)&footerloc;
-    infile << ftloc[3];
-    infile << ftloc[2];
-    infile << ftloc[1];
-    infile << ftloc[0];
-    infile << (unsigned char)0x03; //c07
-    infile.seekg(footerloc, ios::beg); //reset back to footer
+    // infile.seekg(footerloc, ios::beg); //reset back to footer
 
     //write footer verification (c00)
-    // infile << temp1;
-    // infile << temp2;
-    // infile << temp3;
-    // infile << temp4;
-    // infile << temp5;
+    infile << temp1;
+    infile << temp2;
+    infile << temp3;
+    infile << temp4;
+    infile << temp5;
 
     //c02
     info.internalname.trim();
@@ -262,7 +274,6 @@ int libcanister::canister::close ()
         infile << sizeout[2];
         infile << sizeout[1];
         infile << sizeout[0];
-        cout << "file size: " << files[i].dsize << endl;
 
         //c05
         unsigned char* id = (unsigned char*)(void*)&files[i].cfid;
@@ -279,6 +290,16 @@ int libcanister::canister::close ()
         i++;
     }
 
+    infile << (unsigned char)0x03; //c07
+
+    infile.seekg(9, ios::beg); //go back to header
+
+    //write the new footerloc into place (c11)
+    unsigned char* ftloc = (unsigned char*)(void*)&footerloc;
+    infile << ftloc[3];
+    infile << ftloc[2];
+    infile << ftloc[1];
+    infile << ftloc[0];
     infile << (unsigned char)0x03; //c07
 
     //no other modifications to the canister should happen after this point
@@ -380,18 +401,20 @@ int libcanister::canister::open()
                     files[i].path = readstr(infile);
                     files[i].cachestate = 0;
                     files[i].data = canmem::null();
-
-                    //deal with the table of contents
-                    int tLen = tocLen;
-                    tocLen += files[i].path.size;
-                    char* tmp = tocRaw;
-                    tocRaw = new char[tocLen];
-                    memcpy(tocRaw, tmp, tLen);
-                    memcpy(tocRaw + tLen, files[i].path.data, files[i].path.size);
-                    tocRaw[tocLen-1] = '\n';
-                    // cout << "newFile: " << files[i].path.data << endl;
-                    // cout << "tocLen: " << tocLen << endl;
-                    // cout << "tocRaw:" << endl << "\"" << tocRaw << "\"" << endl;
+                    if (!strcmp(files[i].path.data, (char*)"FRAGMENT"))
+                        files[i].isfrag = 1;
+                    else
+                    {
+                        files[i].isfrag = 0;
+                        //deal with the table of contents
+                        int tLen = tocLen;
+                        tocLen += files[i].path.size;
+                        char* tmp = tocRaw;
+                        tocRaw = new char[tocLen];
+                        memcpy(tocRaw, tmp, tLen);
+                        memcpy(tocRaw + tLen, files[i].path.data, files[i].path.size);
+                        tocRaw[tocLen-1] = '\n';
+                    }
 
                     //read the next file
                     i++;
