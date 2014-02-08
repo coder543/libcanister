@@ -16,11 +16,10 @@ echo "      Building comptester" &&
 
 g++ comptester.cpp libcanmem.o bzipWrapper.o -lbz2 -o ../bin/comptester.bin &&
 
-#rm *.o &&
+rm *.o &&
 
 echo "      Running  canisterdemo" &&
 echo "" &&
 echo "=====================================" &&
 cd ../bin/
-./comptester.bin ../resources/testdata
 ./canidemo.bin ../resources/candemo
