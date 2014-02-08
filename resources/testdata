@@ -131,6 +131,15 @@ bool libcanister::canister::writeFile(canfile file)
         }
         i++;
     }
+    //search for a fragment large enough to hold this
+    while (i < info.numfiles)
+    {
+        //is this a fragment?
+        if (files[i].cfid & 0xFF000000)
+        {
+
+        }
+    }
     //here we generate a new CFID for the file
     file.cfid = ++info.numfiles;
     //mark it to be in need of flushing
