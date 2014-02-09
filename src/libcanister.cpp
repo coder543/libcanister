@@ -222,7 +222,6 @@ int libcanister::canister::close ()
         cout << "Whoa there.." << endl;
     infile.seekg(0, ios::beg);
     //write the header verification (c00)
-    unsigned char temp1, temp2, temp3, temp4, temp5;
 
     infile << 0x01;
     infile << 'c';
@@ -259,11 +258,11 @@ int libcanister::canister::close ()
     // infile.seekg(footerloc, ios::beg); //reset back to footer
 
     //write footer verification (c00)
-    infile << temp1;
-    infile << temp2;
-    infile << temp3;
-    infile << temp4;
-    infile << temp5;
+    infile << 0x01;
+    infile << 'c';
+    infile << 'a';
+    infile << 'n';
+    infile << 0x01;
 
     //c02
     info.internalname.trim();
@@ -382,7 +381,7 @@ int libcanister::canister::open()
                 info.internalname = readstr(infile);
                 dout << "internalname: " << info.internalname.data << endl;
                 int i = 0;
-                char* tocRaw;
+                char* tocRaw = 0x0;
                 int tocLen = 0;
                 infile >> temp1;
                 //loop through the file headers for each file
@@ -423,7 +422,8 @@ int libcanister::canister::open()
                         tocLen += files[i].path.size;
                         char* tmp = tocRaw;
                         tocRaw = new char[tocLen];
-                        memcpy(tocRaw, tmp, tLen);
+                        if (tLen > 0)
+                            memcpy(tocRaw, tmp, tLen);
                         memcpy(tocRaw + tLen, files[i].path.data, files[i].path.size);
                         tocRaw[tocLen-1] = '\n';
                     }
