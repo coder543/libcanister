@@ -43,12 +43,22 @@ libcanister::canmem bzipWrapper::compress(libcanister::canmem &rawdata, int extr
     		//compdatamax will have been altered by the BZ2 function
             //let's allocate a new canmem object to contain the data less wastefully
             //the other will be deallocated when this function returns
-            libcanister::canmem finaldata = *(new libcanister::canmem(compdatamax + 1 + sizeof(unsigned int)));
-            finaldata.data[0] = 1; //version of this ad-hoc method of storing the size of the uncompressed data
-            unsigned int* uncompsize = (unsigned int*)(finaldata.data + 1);
-            *uncompsize = rawdata.size; //record the size of the uncompressed data
-            memcpy(finaldata.data + 1 + sizeof(unsigned int), compdata.data, compdatamax);
-    		return finaldata;
+            if (compdatamax < rawdata.size)
+            {
+                libcanister::canmem finaldata = *(new libcanister::canmem(compdatamax + 1 + sizeof(unsigned int)));
+                finaldata.data[0] = 1; //version of this ad-hoc method of storing the size of the uncompressed data
+                unsigned int* uncompsize = (unsigned int*)(finaldata.data + 1);
+                *uncompsize = rawdata.size; //record the size of the uncompressed data
+                memcpy(finaldata.data + 1 + sizeof(unsigned int), compdata.data, compdatamax);
+    		    return finaldata;
+            }
+            else
+            {
+                libcanister::canmem finaldata = *(new libcanister::canmem(compdatamax + 1));
+                finaldata.data[0] = 0; //no compression because the "compressed" size was bigger
+                memcpy(finaldata.data + 1, rawdata.data, rawdata.size);
+                return finaldata;
+            }
     	break;
     }
     return libcanister::canmem::null();
@@ -56,6 +66,12 @@ libcanister::canmem bzipWrapper::compress(libcanister::canmem &rawdata, int extr
 
 libcanister::canmem bzipWrapper::inflate(libcanister::canmem &compdata, int extra)
 {
+    if (compdata.data[0] == 0) //no compression
+    {
+        libcanister::canmem finaldata = *(new libcanister::canmem(compdata.size-1));
+        memcpy(finaldata.data, compdata.data, compdata.size-1);
+        return finaldata;
+    }
     if (compdata.data[0] == 1)
     { //we support this version! excellent.
         unsigned int* uncompsize_ptr = (unsigned int*)(compdata.data + 1);

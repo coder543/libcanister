@@ -3,6 +3,12 @@
 #include "bzipWrapper.h"
 using namespace std;
 
+/*
+unhandled edge cases for fragments
+-- creating a new fragment adjacent to an existing one
+   |-- should rewrite the existing fragment to encompass both
+-- defragging
+*/
 
 libcanister::canister::canister (char* fspath)
 {
@@ -34,10 +40,11 @@ int libcanister::canister::delFile(canmem path)
         //if we found it
         if(!strcmp(files[i].path.data, path.data))
         {
+            files[i].data = *(new canmem(files[i].dsize));
             files[i].data.fragmem();
             files[i].cachestate = 2;
             files[i].isfrag = 1;
-            files[i].cfid &= 0x80000000;
+            files[i].cfid |= 0x80000000;
             files[i].path.data = (char*)"FRAGMENT";
             files[i].path.countlen();
             return 0;
@@ -82,8 +89,7 @@ bool libcanister::canister::writeFile(canmem path, canmem data)
     wrapper.isfrag = 0;
     wrapper.cachestate = 2;
     wrapper.parent = this;
-    writeFile(wrapper);
-    return true;
+    return writeFile(wrapper);;
 }
 
 bool libcanister::canister::writeFile(canfile file)
@@ -99,31 +105,50 @@ bool libcanister::canister::writeFile(canfile file)
     canmem tmpdata = bzipWrapper::compress(file.data);
     int i = 0;
     //search for the file
+    dout << "writeFile([name: '" << file.path.data << "', size: " << tmpdata.size << ")" << endl;
     while (i < info.numfiles)
     {
         //if it already exists
+        dout << file.path.data << " == " << files[i].path.data << " ?" << endl;
+        // dout << file.data.data << endl;
         if (!strcmp(files[i].path.data, file.path.data))
         {
+            dout << "writeFile -- file already exists" << endl;
             //then we check to make sure the new version would fit within the old
             if (tmpdata.size == files[i].dsize || tmpdata.size < files[i].dsize - 6)
             {
+                dout << "writeFile -- new contents will fit within old." << endl;
                 //whereupon we make the changeover
                 files[i].dsize = tmpdata.size;
                 files[i].data = file.data;
                 files[i].cachestate = 2; //needs flush
+                files[i].cfid &= 0xEFFFFFFF;
                 //and handle the fragmented leftovers
-                if (tmpdata.size < files[i].dsize - 6)
-                {
-                    #warning "Need to handle fragment."
-                }
+                //create a fragment file
+                canfile fragment;
+                fragment.cfid = (++info.numfiles) | 0x80000000;
+                fragment.cachestate = 2;
+                fragment.isfrag = 1;
+                fragment.data = *(new canmem(files[i].dsize - tmpdata.size - 5));
+                fragment.data.fragmem();
+                //then we rebuild the array to be one larger
+                canfile* newSet = new canfile[info.numfiles];
+                //copy the old into the new
+                memcpy(newSet, files, (i+1) * sizeof(canfile));
+                //put this file into the array
+                newSet[i+1] = fragment;
+                memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
+                //and move the old pointer to look at this new array
+                files = newSet;
                 return true;
             }
             else
             {
+                dout << "writeFile -- new file won't fit within old, making fragment." << endl;
                 //otherwise, we're just going to have to make the original
                 //file into one big fragment and let the rest of the
                 //function take care of the bigger version of the file
-                files[i].cfid &= 0x80000000;
+                files[i].cfid |= 0x80000000;
                 files[i].isfrag = 1;
                 files[i].path = *(new canmem((char*)"FRAGMENT"));
                 //++info.numfiles; not sure if this was needed
@@ -132,22 +157,54 @@ bool libcanister::canister::writeFile(canfile file)
         }
         i++;
     }
+    i = 0;
     //search for a fragment large enough to hold this
     while (i < info.numfiles)
     {
         //is this a fragment?
         if (files[i].cfid & 0x80000000)
         {
+            dout << "writeFile -- found a fragment of length " << files[i].dsize << endl;
             //can we fit it inside the fragment?
             if (files[i].dsize >= tmpdata.size + 6)
             {
+                dout << "writeFile -- file will fit within fragment, inserting." << endl;
                 files[i] = file;
                 files[i].data = tmpdata;
                 files[i].dsize = tmpdata.size;
                 files[i].cachestate = 2;
+                //create a fragment file
+                canfile fragment;
+                fragment.cfid = (++info.numfiles) | 0x80000000;
+                fragment.cachestate = 2;
+                fragment.isfrag = 1;
+                fragment.data = *(new canmem(files[i].dsize - tmpdata.size - 5));
+                fragment.data.fragmem();
+                //then we rebuild the array to be one larger
+                canfile* newSet = new canfile[info.numfiles];
+                //copy the old into the new
+                memcpy(newSet, files, (i+1) * sizeof(canfile));
+                //put this file into the array
+                newSet[i+1] = fragment;
+                memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
+                //and move the old pointer to look at this new array
+                files = newSet;
+                //and here we add the new file onto the autogenerated TOC
+                if (TOC.data.size > 0 && TOC.data.data[TOC.data.size-1] == 0x00)
+                    TOC.data.size--;
+                int tLen = TOC.data.size;
+                TOC.data.size += file.path.size;
+                char* tmp = TOC.data.data;
+                TOC.data.data = new char[TOC.data.size];
+                memcpy(TOC.data.data, tmp, tLen);
+                memcpy(TOC.data.data + tLen, file.path.data, file.path.size);
+                TOC.data.data[TOC.data.size-1] = '\n';
+                return true;
             }
         }
+        i++;
     }
+    dout << "writeFile -- creating all-new file to contain contents." << endl;
     //here we generate a new CFID for the file
     file.cfid = ++info.numfiles;
     //mark it to be in need of flushing
@@ -157,12 +214,14 @@ bool libcanister::canister::writeFile(canfile file)
     //then we rebuild the array to be one larger
     canfile* newSet = new canfile[info.numfiles];
     //copy the old into the new
-    memcpy(newSet, files, (info.numfiles - 1) * sizeof(canfile));
+    memcpy(newSet, files, (info.numfiles-1) * sizeof(canfile));
     //put this file into the array
     newSet[info.numfiles-1] = file;
     //and move the old pointer to look at this new array
     files = newSet;
     //and here we add the new file onto the autogenerated TOC
+    if (TOC.data.size > 0 && TOC.data.data[TOC.data.size-1] == 0x00)
+        TOC.data.size--;
     int tLen = TOC.data.size;
     TOC.data.size += file.path.size;
     char* tmp = TOC.data.data;
@@ -223,11 +282,11 @@ int libcanister::canister::close ()
     infile.seekg(0, ios::beg);
     //write the header verification (c00)
 
-    infile << 0x01;
+    infile << (char)0x01;
     infile << 'c';
     infile << 'a';
     infile << 'n';
-    infile << 0x01;
+    infile << (char)0x01;
 
 
     //write the new file count (filect) (c01)
@@ -258,11 +317,11 @@ int libcanister::canister::close ()
     // infile.seekg(footerloc, ios::beg); //reset back to footer
 
     //write footer verification (c00)
-    infile << 0x01;
+    infile << (char)0x01;
     infile << 'c';
     infile << 'a';
     infile << 'n';
-    infile << 0x01;
+    infile << (char)0x01;
 
     //c02
     info.internalname.trim();

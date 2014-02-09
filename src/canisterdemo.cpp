@@ -50,7 +50,7 @@ void docmd(canister &usercan, char* rcmd)
         infile.close();
 
         canmem data = *(new canmem(buflen));
-        data.data = buffer;
+        memcpy(data.data, buffer, buflen);
         canmem path = cStr(cmdbufb);
         usercan.writeFile(path, data);
         cout << "Done." << endl;
@@ -91,7 +91,7 @@ void docmd(canister &usercan, char* rcmd)
         cin >> cmdbufa;
 
         canfile tocheck = usercan.getFile(cStr(cmdbufa));
-        cout << "compression ratio is " << tocheck.dsize/tocheck.data.size << endl;
+        cout << "compression ratio is " << (float)tocheck.data.size/(float)tocheck.dsize << endl;
     }
     else if (!strcmp(rcmd, "depart"))
     {

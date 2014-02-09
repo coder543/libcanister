@@ -16,6 +16,8 @@ libcanister::canmem::canmem(char* strdata)
 {
     data = strdata;
     countlen();
+    data = new char[size]; //we must own the pointer.
+    memcpy(data, strdata, size);
 }
 
 libcanister::canmem::~canmem()
@@ -47,8 +49,8 @@ void libcanister::canmem::countlen()
     int i = -1;
     while (data[++i] != 0); //loop until the very end of this data block
     size = ++i;
-    if (size > 0)
-        size++; //grab the null-char at the end of the string
+    //if (size > 0)
+    //    size++; //grab the null-char at the end of the string
 }
 
 void libcanister::canmem::trim()

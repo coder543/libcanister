@@ -6,7 +6,7 @@
 CC=clang++
 #SA is the static analyzer
 #(comment out next line if there is no static analyzer)
-SA="scan-build -k"
+#SA="scan-build -k"
 
 cd src
 clear
