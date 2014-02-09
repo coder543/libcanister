@@ -12,11 +12,11 @@ void libcanister::canfile::cache()
     }
     else if (!cachestate) //if it isn't cached, we want it
     {
+        dout << "file " << path.data << " not in memory -- caching." << endl;
         //open the canister once again
         ifstream infile;
         infile.open(parent->info.path.data);
         int i = 0;
-        char tmp = 0;
         infile.seekg(14, ios::beg); //seek to file section
         //loop through the files
         while (i < parent->info.numfiles)
@@ -32,14 +32,14 @@ void libcanister::canfile::cache()
         //read the id as it is written in the canister
         int id = readint32(infile);
         //does the id match correctly? and make sure this is no fragment
-        if (id == cfid || id == (cfid + 0xFF000000))
+        if (id & 0x80000000)
         {
-            if (id == (cfid + 0xFF000000))
-            {
-                cachestate = -1;
-                data = *(new canmem((char*)"This is a fragment. Not being read to memory."));
-                return;
-            }
+            cachestate = -1;
+            data = *(new canmem((char*)"This is a fragment. Not being read to memory."));
+            return;
+        }
+        else if (id == cfid)
+        {
             //now then, we need to create a new data member to hold the
             //compressed file contents
             data = *(new canmem(dsize));
@@ -57,16 +57,17 @@ void libcanister::canfile::cache()
         }
         else
         { //otherwise we have a problem
-            cout << "Error: canister is corrupt. CFID Code: " << id << ":" << cfid << endl;
+            cerr << "Error: canister is corrupt. CFID Code: " << id << ":" << cfid << endl;
             cachestate = -1;
             data = *(new canmem((char*)"Sorry -- canister is corrupted somehow."));
         }
     }
+    else
+        dout << "file " << path.data << " already in memory -- not caching." << endl;
 }
 
 void libcanister::canfile::cachedump()
 {
-    //#warning "Need to implement cachedump."
     if (cachestate == 2 && !parent->readonly) //time to dump the cache
     {
         canmem cmpdata;
@@ -78,7 +79,6 @@ void libcanister::canfile::cachedump()
         fstream infile;
         infile.open(parent->info.path.data, ios::in | ios::out | ios::binary);
         int i = 0;
-        char tmp = 0;
         infile.seekg(14, ios::beg); //seek to file section
         //loop through the files
         while (i < parent->info.numfiles)
@@ -109,6 +109,7 @@ void libcanister::canfile::cachedump()
 
                 if (parent->files[i].cfid == cfid && cfid == id)
                 {
+                    dout << "rewriting existing file." << endl;
                     infile.write(cmpdata.data, cmpdata.size);
                     break;
                 }

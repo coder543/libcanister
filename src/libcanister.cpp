@@ -37,7 +37,7 @@ int libcanister::canister::delFile(canmem path)
             files[i].data.fragmem();
             files[i].cachestate = 2;
             files[i].isfrag = 1;
-            files[i].cfid += 0xFF000000;
+            files[i].cfid &= 0x80000000;
             files[i].path.data = (char*)"FRAGMENT";
             files[i].path.countlen();
             return 0;
@@ -95,6 +95,8 @@ bool libcanister::canister::writeFile(canfile file)
         cout << "Error: canister is read only, file could not be written." << endl;
         return false;
     }
+    //we want to first figure out how much disk space it needs
+    canmem tmpdata = bzipWrapper::compress(file.data);
     int i = 0;
     //search for the file
     while (i < info.numfiles)
@@ -102,8 +104,6 @@ bool libcanister::canister::writeFile(canfile file)
         //if it already exists
         if (!strcmp(files[i].path.data, file.path.data))
         {
-            //then we want to first figure out how much disk space it needs
-            canmem tmpdata = bzipWrapper::compress(file.data);
             //then we check to make sure the new version would fit within the old
             if (tmpdata.size == files[i].dsize || tmpdata.size < files[i].dsize - 6)
             {
@@ -120,13 +120,14 @@ bool libcanister::canister::writeFile(canfile file)
             }
             else
             {
-                //otherwise, we're just gonna have to make the original
+                //otherwise, we're just going to have to make the original
                 //file into one big fragment and let the rest of the
                 //function take care of the bigger version of the file
-                files[i].cfid += 0xFF000000;
+                files[i].cfid &= 0x80000000;
                 files[i].isfrag = 1;
                 files[i].path = *(new canmem((char*)"FRAGMENT"));
                 //++info.numfiles; not sure if this was needed
+                break;
             }
         }
         i++;
@@ -135,9 +136,16 @@ bool libcanister::canister::writeFile(canfile file)
     while (i < info.numfiles)
     {
         //is this a fragment?
-        if (files[i].cfid & 0xFF000000)
+        if (files[i].cfid & 0x80000000)
         {
-
+            //can we fit it inside the fragment?
+            if (files[i].dsize >= tmpdata.size + 6)
+            {
+                files[i] = file;
+                files[i].data = tmpdata;
+                files[i].dsize = tmpdata.size;
+                files[i].cachestate = 2;
+            }
         }
     }
     //here we generate a new CFID for the file
@@ -215,17 +223,12 @@ int libcanister::canister::close ()
     infile.seekg(0, ios::beg);
     //write the header verification (c00)
     unsigned char temp1, temp2, temp3, temp4, temp5;
-    temp1 = 0x01;
-    temp2 = 'c';
-    temp3 = 'a';
-    temp4 = 'n';
-    temp5 = 0x01;
 
-    infile << temp1;
-    infile << temp2;
-    infile << temp3;
-    infile << temp4;
-    infile << temp5;
+    infile << 0x01;
+    infile << 'c';
+    infile << 'a';
+    infile << 'n';
+    infile << 0x01;
 
 
     //write the new file count (filect) (c01)
@@ -410,7 +413,7 @@ int libcanister::canister::open()
                     files[i].path = readstr(infile);
                     files[i].cachestate = 0;
                     files[i].data = canmem::null();
-                    if (!strcmp(files[i].path.data, (char*)"FRAGMENT"))
+                    if (files[i].cfid & 0x80000000 || !strcmp(files[i].path.data, (char*)"FRAGMENT"))
                         files[i].isfrag = 1;
                     else
                     {
@@ -434,7 +437,13 @@ int libcanister::canister::open()
                     cerr << "Corrupted Canister! Error message: Incomplete file table! Data: " << (unsigned int)temp1 << " " << infile.tellg() << endl;
                     return -1;
                 }
-                tocRaw[tocLen] = 0x00;
+                if (tocLen > 0)
+                    tocRaw[tocLen] = 0x00;
+                else
+                {
+                    tocRaw = new char[1];
+                    tocRaw[0] = 0x00;
+                }
                 canmem tocDat = *(new canmem(tocLen));
                 tocDat.data = tocRaw;
                 TOC.data = tocDat;

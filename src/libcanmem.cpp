@@ -38,16 +38,17 @@ void libcanister::canmem::fragmem()
         return;
     int i = -1;
     while (++i < size)
-        data[i] = 255;
+        data[i] = 0xFF;
     data[i-1] = 0x02;
 }
 
 void libcanister::canmem::countlen()
 {
     int i = -1;
-    while (data[++i] != 0)
-        ; //loop until the very end of this data block
+    while (data[++i] != 0); //loop until the very end of this data block
     size = ++i;
+    if (size > 0)
+        size++; //grab the null-char at the end of the string
 }
 
 void libcanister::canmem::trim()

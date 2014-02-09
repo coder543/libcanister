@@ -92,5 +92,5 @@ libcanister::canmem bzipWrapper::inflate(libcanister::canmem &compdata, int extr
             break;
         }
     }
-    return libcanister::canmem::null();
+    return compdata;
 }
