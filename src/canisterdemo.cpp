@@ -5,7 +5,7 @@
 #include <cstring>
 using namespace libcanister;
 using namespace std;
-#define cStr(x) *(new canmem((char*)x))
+#define cStr(x) canmem((char*)x)
 
 void docmd(canister &usercan, char* rcmd)
 {
@@ -49,10 +49,11 @@ void docmd(canister &usercan, char* rcmd)
         infile.read(buffer, buflen);
         infile.close();
 
-        canmem data = *(new canmem(buflen));
+        canmem data(buflen);
         memcpy(data.data, buffer, buflen);
-        canmem path = cStr(cmdbufb);
+        canmem path(cmdbufb);
         usercan.writeFile(path, data);
+        free(buffer);
         cout << "Done." << endl;
     }
     else if (!strcmp(rcmd, "export"))
@@ -113,10 +114,10 @@ int main(int argc, char** argv)
         cout << "if the canister does not exist, it will be created." << endl;
         exit(2);
     }
-    canmem location;
-    location.data = argv[1];
-    location.countlen();
-    canister usercan = *(new canister(location));
+    canmem location(argv[1]);
+    // location.data = argv[1];
+    // location.countlen();
+    canister usercan(location);
     usercan.open();
     cout << usercan.info.internalname.data << " is now open." << endl;
     cout << "Type 'helpme' for help." << endl;
@@ -129,4 +130,5 @@ int main(int argc, char** argv)
     }
     usercan.close(); //this line won't ever be the one to close it
                      //but it is here as a reminder.
+    canmem::walkchain();
 }

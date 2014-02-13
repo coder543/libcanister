@@ -6,7 +6,7 @@
 #include <cstring>
 
 #define int64 unsigned long long
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define dout cout
@@ -24,19 +24,28 @@ namespace libcanister
     //length which may or may not contain null bytes. 
     class canmem
     {
+        static canmem* head;
+        static canmem* tail;
+        canmem* next;
+        canmem* prev;
+        void addlink();
+        static bool isonchain(canmem* test);
     public:
         char* data; //the raw memory block
         int size; //the absolute length of the block
         canmem(); //creates an unallocated canmem
         canmem(int allocsize); //creates an allocated, blank canmem of size
         canmem(char* strdata); //automates the creation of zero-limited canmems
+        canmem(const canmem &obj); //copy constructor
+        canmem& operator=(const canmem &obj); //assignment operator
         ~canmem(); //cleans up the canmem
         void zeromem(); //overwrites this canmem
         void fragmem(); //overwrites this canmem with fragment notation
         void countlen(); //counts length of zero-limited strings and stores it in size
         void trim(); //removes any nulls from the end of the string
-        static canmem null(); //returns a singleton null canmem
-        
+        static canmem* null(); //returns a singleton null canmem
+        static void walkchain();
+        static int countchain();
     };
     
     //contains information about the canister

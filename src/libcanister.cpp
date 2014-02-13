@@ -12,7 +12,7 @@ unhandled edge cases for fragments
 
 libcanister::canister::canister (char* fspath)
 {
-    info.path = *(new canmem(fspath));
+    info.path = canmem(fspath);
     cachemax = 25;
     cachecnt = 0;
     readonly = false;
@@ -20,7 +20,7 @@ libcanister::canister::canister (char* fspath)
 
 libcanister::canister::canister (canmem fspath)
 {
-    info.path = fspath;
+    info.path = *(new canmem(fspath)); //manually invoke copy constructor to avoid elision damage
     cachemax = 25;
     cachecnt = 0;
     readonly = false;
@@ -102,10 +102,10 @@ bool libcanister::canister::writeFile(canfile file)
         return false;
     }
     //we want to first figure out how much disk space it needs
-    canmem tmpdata = bzipWrapper::compress(file.data);
+    canmem* tmpdata = bzipWrapper::compress(file.data);
     int i = 0;
     //search for the file
-    dout << "writeFile([name: '" << file.path.data << "', size: " << tmpdata.size << ")" << endl;
+    dout << "writeFile([name: '" << file.path.data << "', size: " << tmpdata->size << ")" << endl;
     while (i < info.numfiles)
     {
         //if it already exists
@@ -115,11 +115,11 @@ bool libcanister::canister::writeFile(canfile file)
         {
             dout << "writeFile -- file already exists" << endl;
             //then we check to make sure the new version would fit within the old
-            if (tmpdata.size == files[i].dsize || tmpdata.size < files[i].dsize - 6)
+            if (tmpdata->size == files[i].dsize || tmpdata->size < files[i].dsize - 6)
             {
                 dout << "writeFile -- new contents will fit within old." << endl;
                 //whereupon we make the changeover
-                files[i].dsize = tmpdata.size;
+                files[i].dsize = tmpdata->size;
                 files[i].data = file.data;
                 files[i].cachestate = 2; //needs flush
                 files[i].cfid &= 0xEFFFFFFF;
@@ -129,7 +129,7 @@ bool libcanister::canister::writeFile(canfile file)
                 fragment.cfid = (++info.numfiles) | 0x80000000;
                 fragment.cachestate = 2;
                 fragment.isfrag = 1;
-                fragment.data = *(new canmem(files[i].dsize - tmpdata.size - 5));
+                fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
                 fragment.data.fragmem();
                 //then we rebuild the array to be one larger
                 canfile* newSet = new canfile[info.numfiles];
@@ -166,19 +166,19 @@ bool libcanister::canister::writeFile(canfile file)
         {
             dout << "writeFile -- found a fragment of length " << files[i].dsize << endl;
             //can we fit it inside the fragment?
-            if (files[i].dsize >= tmpdata.size + 6)
+            if (files[i].dsize >= tmpdata->size + 6)
             {
                 dout << "writeFile -- file will fit within fragment, inserting." << endl;
                 files[i] = file;
-                files[i].data = tmpdata;
-                files[i].dsize = tmpdata.size;
+                files[i].data = *tmpdata;
+                files[i].dsize = tmpdata->size;
                 files[i].cachestate = 2;
                 //create a fragment file
                 canfile fragment;
                 fragment.cfid = (++info.numfiles) | 0x80000000;
                 fragment.cachestate = 2;
                 fragment.isfrag = 1;
-                fragment.data = *(new canmem(files[i].dsize - tmpdata.size - 5));
+                fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
                 fragment.data.fragmem();
                 //then we rebuild the array to be one larger
                 canfile* newSet = new canfile[info.numfiles];
@@ -249,7 +249,7 @@ void libcanister::canister::cacheclean (int sCFID, bool dFlush)
                 files[i].cachedump();
             else
             {
-                files[i].data = canmem::null();
+                files[i].data = *canmem::null();
                 files[i].cachestate = 0;
             }
         }
@@ -265,6 +265,10 @@ void libcanister::canister::cacheclean (int sCFID, bool dFlush)
 libcanister::canister::~canister()
 {
     close();
+    int i = -1;
+    while (++i < info.numfiles)
+        files[i].~canfile();
+    delete files;
 }
 
 //flushes all caches and prepares for object deletion
@@ -308,7 +312,7 @@ int libcanister::canister::close ()
     {
         //dout << files[i].cachestate << endl;
         files[i].cachedumpfinal(infile);
-        files[i].data = canmem::null();
+        files[i].data = *canmem::null();
         files[i].cachestate = 0;
         i++;
     }
@@ -387,7 +391,7 @@ int libcanister::canister::open()
     infile.open(fspath.data);
     //now we begin creating the table of contents
     TOC.parent = this;
-    TOC.path = canmem::null();
+    TOC.path = *canmem::null();
     TOC.cachestate = 1;
     TOC.cfid = -1;
     TOC.dsize = 0;
@@ -397,9 +401,7 @@ int libcanister::canister::open()
     {
         info.internalname = *(new canmem((char*)"generic canister"));
         info.numfiles = 0;
-        canmem tocData;
-        tocData.data = (char*)"";
-        tocData.size = 0;
+        canmem tocData((char*)"\0");
         TOC.data = tocData;
         return 0;
     }
@@ -437,7 +439,7 @@ int libcanister::canister::open()
                 //create a file array to hold the files
                 files = new canfile[info.numfiles];
                 //set the internal name of the canister
-                info.internalname = readstr(infile);
+                info.internalname = *readstr(infile);
                 dout << "internalname: " << info.internalname.data << endl;
                 int i = 0;
                 char* tocRaw = 0x0;
@@ -468,9 +470,9 @@ int libcanister::canister::open()
                     dout << "dsize: " << files[i].dsize << endl;
                     files[i].cfid = readint32(infile);
                     dout << "cfid: " << files[i].cfid << endl;
-                    files[i].path = readstr(infile);
+                    files[i].path = *readstr(infile);
                     files[i].cachestate = 0;
-                    files[i].data = canmem::null();
+                    files[i].data = *canmem::null();
                     if (files[i].cfid & 0x80000000 || !strcmp(files[i].path.data, (char*)"FRAGMENT"))
                         files[i].isfrag = 1;
                     else
@@ -480,7 +482,7 @@ int libcanister::canister::open()
                         int tLen = tocLen;
                         tocLen += files[i].path.size;
                         char* tmp = tocRaw;
-                        tocRaw = new char[tocLen];
+                        tocRaw = new char[tocLen+1];
                         if (tLen > 0)
                             memcpy(tocRaw, tmp, tLen);
                         memcpy(tocRaw + tLen, files[i].path.data, files[i].path.size);
@@ -503,9 +505,7 @@ int libcanister::canister::open()
                     tocRaw = new char[1];
                     tocRaw[0] = 0x00;
                 }
-                canmem tocDat = *(new canmem(tocLen));
-                tocDat.data = tocRaw;
-                TOC.data = tocDat;
+                TOC.data = *(new canmem(tocRaw));
 
                 infile.close();
                 

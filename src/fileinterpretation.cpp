@@ -3,7 +3,7 @@
 #include "fileinterpretation.h"
 
 //reads a 0x02-limited string of maximum length 512 from infile
-libcanister::canmem readstr(ifstream& infile)
+libcanister::canmem* readstr(ifstream& infile)
 {
     int i = 1;
     char* str = (char*)malloc(512);
@@ -11,12 +11,11 @@ libcanister::canmem readstr(ifstream& infile)
     while (i < 512 && str[i-1] != 2)
         infile >> str[i++];
     str[i-1] = 0;
-    libcanister::canmem intername;
-    intername.data = (char*)malloc(i);
-    memcpy(intername.data, str, i);
-    intername.size = i;
+    libcanister::canmem* datastr = new libcanister::canmem(i);
+    memcpy(datastr->data, str, i);
+    datastr->size = i;
     free(str);
-    return intername;
+    return datastr;
 }
 
 //reads a 32-bit integer from the infile stream

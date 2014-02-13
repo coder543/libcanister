@@ -25,6 +25,11 @@ echo "" &&
 echo "=====================================" &&
 cd ../bin/
 
+if [ $? != 0 ]
+then
+	exit
+fi
+
 if [ "$1" == "-g" ]
 then
 	gdb --args ./canidemo.bin ../resources/candemo

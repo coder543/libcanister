@@ -42,11 +42,11 @@ void libcanister::canfile::cache()
         {
             //now then, we need to create a new data member to hold the
             //compressed file contents
-            data = *(new canmem(dsize));
+            canmem tmpdata(dsize);
             //read them into memory
-            infile.read(data.data, dsize);
+            infile.read(tmpdata.data, dsize);
             //inflate the data
-            data = bzipWrapper::inflate(data);
+            data = *bzipWrapper::inflate(tmpdata);
             //mark the cache state to be clean
             cachestate = 1;
             //let the canister know we've got more cached
@@ -70,12 +70,12 @@ void libcanister::canfile::cachedump()
 {
     if (cachestate == 2 && !parent->readonly) //time to dump the cache
     {
-        canmem cmpdata;
+        canmem* cmpdata;
         if (!isfrag)
             cmpdata = bzipWrapper::compress(data);
         else
-            cmpdata = data;
-        dsize = cmpdata.size;
+            cmpdata = &data;
+        dsize = cmpdata->size;
         fstream infile;
         infile.open(parent->info.path.data, ios::in | ios::out | ios::binary);
         int i = 0;
@@ -110,7 +110,7 @@ void libcanister::canfile::cachedump()
                 if (parent->files[i].cfid == cfid && cfid == id)
                 {
                     dout << "rewriting existing file." << endl;
-                    infile.write(cmpdata.data, cmpdata.size);
+                    infile.write(cmpdata->data, cmpdata->size);
                     break;
                 }
                 else if (parent->files[i].cfid != id)
@@ -124,7 +124,7 @@ void libcanister::canfile::cachedump()
                     infile << id[1];
                     infile << id[0];
 
-                    infile.write(cmpdata.data, cmpdata.size);
+                    infile.write(cmpdata->data, cmpdata->size);
                     break;
                 }
             }
@@ -138,7 +138,7 @@ void libcanister::canfile::cachedump()
                 infile << id[1];
                 infile << id[0];
 
-                infile.write(cmpdata.data, cmpdata.size);
+                infile.write(cmpdata->data, cmpdata->size);
                 break;
             }
             //seek to the beginning of the next file
@@ -156,12 +156,12 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
 
     if (cachestate == 2 && !parent->readonly) //time to dump the cache
     {
-        canmem cmpdata;
+        canmem* cmpdata;
         if (!isfrag)
             cmpdata = bzipWrapper::compress(data);
         else
-            cmpdata = data;
-        dsize = cmpdata.size;
+            cmpdata = &data;
+        dsize = cmpdata->size;
         //int id = readint32(infile);
         //readint32 (needed because fstream != ifstream)
         if (!infile.good())
@@ -185,7 +185,7 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
             id += temp;
             dout << (int)temp << " ";
             if (cfid == id)
-                infile.write(cmpdata.data, cmpdata.size);
+                infile.write(cmpdata->data, cmpdata->size);
             else if (cfid != id)
             {
                 infile.seekg(-4, ios::cur);
@@ -197,7 +197,7 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
                 infile << id[1];
                 infile << id[0];
 
-                infile.write(cmpdata.data, cmpdata.size);
+                infile.write(cmpdata->data, cmpdata->size);
             }
         }
         else
@@ -209,7 +209,7 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
             infile << id[2];
             infile << id[1];
             infile << id[0];
-            infile.write(cmpdata.data, cmpdata.size);
+            infile.write(cmpdata->data, cmpdata->size);
         }
     }
     else
