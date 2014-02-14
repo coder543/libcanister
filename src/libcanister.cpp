@@ -123,23 +123,26 @@ bool libcanister::canister::writeFile(canfile file)
                 files[i].data = file.data;
                 files[i].cachestate = 2; //needs flush
                 files[i].cfid &= 0xEFFFFFFF;
-                //and handle the fragmented leftovers
-                //create a fragment file
-                canfile fragment;
-                fragment.cfid = (++info.numfiles) | 0x80000000;
-                fragment.cachestate = 2;
-                fragment.isfrag = 1;
-                fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
-                fragment.data.fragmem();
-                //then we rebuild the array to be one larger
-                canfile* newSet = new canfile[info.numfiles];
-                //copy the old into the new
-                memcpy(newSet, files, (i+1) * sizeof(canfile));
-                //put this file into the array
-                newSet[i+1] = fragment;
-                memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
-                //and move the old pointer to look at this new array
-                files = newSet;
+                if (tmpdata->size != files[i].dsize)
+                {
+                    //and handle the fragmented leftovers
+                    //create a fragment file
+                    canfile fragment;
+                    fragment.cfid = (++info.numfiles) | 0x80000000;
+                    fragment.cachestate = 2;
+                    fragment.isfrag = 1;
+                    fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
+                    fragment.data.fragmem();
+                    //then we rebuild the array to be one larger
+                    canfile* newSet = new canfile[info.numfiles];
+                    //copy the old into the new
+                    memcpy(newSet, files, (i+1) * sizeof(canfile));
+                    //put this file into the array
+                    newSet[i+1] = fragment;
+                    memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
+                    //and move the old pointer to look at this new array
+                    files = newSet;
+                }
                 return true;
             }
             else
@@ -166,29 +169,32 @@ bool libcanister::canister::writeFile(canfile file)
         {
             dout << "writeFile -- found a fragment of length " << files[i].dsize << endl;
             //can we fit it inside the fragment?
-            if (files[i].dsize >= tmpdata->size + 6)
+            if (files[i].dsize >= tmpdata->size + 6 || files[i].dsize == tmpdata->size)
             {
                 dout << "writeFile -- file will fit within fragment, inserting." << endl;
                 files[i] = file;
                 files[i].data = *tmpdata;
                 files[i].dsize = tmpdata->size;
                 files[i].cachestate = 2;
-                //create a fragment file
-                canfile fragment;
-                fragment.cfid = (++info.numfiles) | 0x80000000;
-                fragment.cachestate = 2;
-                fragment.isfrag = 1;
-                fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
-                fragment.data.fragmem();
-                //then we rebuild the array to be one larger
-                canfile* newSet = new canfile[info.numfiles];
-                //copy the old into the new
-                memcpy(newSet, files, (i+1) * sizeof(canfile));
-                //put this file into the array
-                newSet[i+1] = fragment;
-                memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
-                //and move the old pointer to look at this new array
-                files = newSet;
+                if (files[i].dsize != tmpdata->size)
+                {
+                    //create a fragment file
+                    canfile fragment;
+                    fragment.cfid = (++info.numfiles) | 0x80000000;
+                    fragment.cachestate = 2;
+                    fragment.isfrag = 1;
+                    fragment.data = *(new canmem(files[i].dsize - tmpdata->size - 5));
+                    fragment.data.fragmem();
+                    //then we rebuild the array to be one larger
+                    canfile* newSet = new canfile[info.numfiles];
+                    //copy the old into the new
+                    memcpy(newSet, files, (i+1) * sizeof(canfile));
+                    //put this file into the array
+                    newSet[i+1] = fragment;
+                    memcpy(newSet + (i+2) * sizeof(canfile), files + (i+1)*sizeof(canfile), (info.numfiles-i-1) * sizeof(canfile));
+                    //and move the old pointer to look at this new array
+                    files = newSet;
+                }
                 //and here we add the new file onto the autogenerated TOC
                 if (TOC.data.size > 0 && TOC.data.data[TOC.data.size-1] == 0x00)
                     TOC.data.size--;
@@ -198,7 +204,7 @@ bool libcanister::canister::writeFile(canfile file)
                 TOC.data.data = new char[TOC.data.size];
                 memcpy(TOC.data.data, tmp, tLen);
                 memcpy(TOC.data.data + tLen, file.path.data, file.path.size);
-                TOC.data.data[TOC.data.size-1] = '\n';
+                TOC.data.data[TOC.data.size-1] = '0';
                 return true;
             }
         }

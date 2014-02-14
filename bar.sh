@@ -32,7 +32,7 @@ fi
 
 if [ "$1" == "-g" ]
 then
-	gdb --args ./canidemo.bin ../resources/candemo
+	gdb --args ./canidemo.bin ../resources/test
 else
-	./canidemo.bin ../resources/candemo
+	./canidemo.bin ../resources/test
 fi

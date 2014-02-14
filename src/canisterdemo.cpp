@@ -29,7 +29,7 @@ void docmd(canister &usercan, char* rcmd)
         cout << "the current name is: " << usercan.info.internalname.data << endl;
         cout << "give the new name: ";
         cin >> cmdbufa;
-        usercan.info.internalname = cStr(cmdbufa);
+        usercan.info.internalname = canmem(cmdbufa);
         cout << "Renamed to " << cmdbufa << "!" << endl;
     }
     else if (!strcmp(rcmd, "import"))
@@ -44,11 +44,15 @@ void docmd(canister &usercan, char* rcmd)
         infile.open(cmdbufa);
         infile.seekg(0, std::ios::end);
         int buflen = infile.tellg();
+        if (buflen <= 0)
+        {
+            cout << "Error: file not found." << endl;
+            return;
+        }
         char* buffer = (char*)malloc(buflen);
         infile.seekg(0, std::ios::beg);
         infile.read(buffer, buflen);
         infile.close();
-
         canmem data(buflen);
         memcpy(data.data, buffer, buflen);
         canmem path(cmdbufb);

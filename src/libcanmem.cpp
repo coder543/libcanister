@@ -5,7 +5,7 @@ libcanister::canmem* libcanister::canmem::tail;
 
 void libcanister::canmem::addlink()
 {
-    if (head == NULL || tail == NULL)
+    if (head == NULL)
     {
         cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
         if (data != NULL)
@@ -21,7 +21,7 @@ void libcanister::canmem::addlink()
         prev = NULL;
         return;
     }
-    if (!isonchain(this))
+    else if (!isonchain(this))
     {
         cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
         if (data != NULL)
@@ -45,8 +45,6 @@ bool libcanister::canmem::isonchain(canmem* test)
         if (cur == test)
             return true;
         cur = cur->next;
-        if (cur == head)
-            return false;
     }
     return false;
 }
@@ -59,8 +57,6 @@ int libcanister::canmem::countchain()
     {
         len++;
         cur = cur->next;
-        if (cur == head)
-            return len;
     }
     return len;
 }
@@ -73,8 +69,6 @@ void libcanister::canmem::walkchain()
     {
         cout << (void*)cur << ": " << cur->size << endl;
         cur = cur->next;
-        if (cur == head)
-            return;
     }
 }
 
@@ -190,8 +184,5 @@ void libcanister::canmem::trim()
 
 libcanister::canmem* libcanister::canmem::null()
 {
-    static canmem nullguy;
-    nullguy.data = NULL;
-    nullguy.size = 0;
-    return &nullguy;
+    return new canmem();
 }
