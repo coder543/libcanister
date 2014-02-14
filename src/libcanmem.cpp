@@ -7,14 +7,14 @@ void libcanister::canmem::addlink()
 {
     if (head == NULL)
     {
-        cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
+        // cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
         if (data != NULL)
-            cout << " " << data;
+            // cout << " " << data;
         else
-            cout << " NULL";
-        cout << " " << size;
-        cout << endl;
-        cout << "link is head and tail" << endl;
+            // cout << " NULL";
+        // cout << " " << size;
+        // cout << endl;
+        // cout << "link is head and tail" << endl;
         head = this;
         tail = this;
         next = NULL;
@@ -23,13 +23,13 @@ void libcanister::canmem::addlink()
     }
     else if (!isonchain(this))
     {
-        cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
+        // cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
         if (data != NULL)
-            cout << " " << data;
+            // cout << " " << data;
         else
-            cout << " NULL";
-        cout << " " << size;
-        cout << endl;
+            // cout << " NULL";
+        // cout << " " << size;
+        // cout << endl;
         tail->next = this;
         prev = tail;
         tail = this;
@@ -63,11 +63,11 @@ int libcanister::canmem::countchain()
 
 void libcanister::canmem::walkchain()
 {
-    cout << "walking chain" << endl;
+    // cout << "walking chain" << endl;
     canmem* cur = head;
     while (cur != NULL)
     {
-        cout << (void*)cur << ": " << cur->size << endl;
+        // cout << (void*)cur << ": " << cur->size << endl;
         cur = cur->next;
     }
 }
@@ -145,7 +145,7 @@ libcanister::canmem::~canmem()
         prev->next = next;
     prev = NULL;
     next = NULL;
-    cout << "unlinked " << (void*)this << " from chain, " << countchain() << " nodes remain." << endl;
+    // cout << "unlinked " << (void*)this << " from chain, " << countchain() << " nodes remain." << endl;
 }
 
 void libcanister::canmem::zeromem()
