@@ -8,9 +8,9 @@ void libcanister::canmem::addlink()
     if (head == NULL)
     {
         // cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
-        if (data != NULL)
+        // if (data != NULL)
             // cout << " " << data;
-        else
+        // else
             // cout << " NULL";
         // cout << " " << size;
         // cout << endl;
@@ -24,9 +24,9 @@ void libcanister::canmem::addlink()
     else if (!isonchain(this))
     {
         // cout << "adding link #" << countchain() + 1 << ": " << (void*)this;
-        if (data != NULL)
+        // if (data != NULL)
             // cout << " " << data;
-        else
+        // else
             // cout << " NULL";
         // cout << " " << size;
         // cout << endl;
