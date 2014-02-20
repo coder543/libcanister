@@ -1,5 +1,5 @@
 #include "libcanister.h"
-
+#ifdef DEBUG
 libcanister::canmem* libcanister::canmem::head;
 libcanister::canmem* libcanister::canmem::tail;
 
@@ -71,13 +71,16 @@ void libcanister::canmem::walkchain()
         cur = cur->next;
     }
 }
+#endif
 
 libcanister::canmem::canmem()
 {
     //cout << "constructing empty canmem" << endl;
     data = 0x0;
     size = -1;
+#ifdef DEBUG
     addlink();
+#endif
 }
 
 libcanister::canmem::canmem(int allocsize)
@@ -86,7 +89,9 @@ libcanister::canmem::canmem(int allocsize)
     //cout << "constructing canmem " << (void*)data << " of size " << allocsize << endl;
     size = allocsize;
     zeromem();
+#ifdef DEBUG
     addlink();
+#endif
 }
 
 libcanister::canmem::canmem(char* strdata)
@@ -96,7 +101,9 @@ libcanister::canmem::canmem(char* strdata)
     data = new char[size]; //we must own the pointer.
     //cout << "constructing canmem " << (void*)data << " " << strdata << endl;
     memcpy(data, strdata, size);
+#ifdef DEBUG
     addlink();
+#endif
 }
 
 libcanister::canmem::canmem(const canmem &obj)
@@ -111,7 +118,9 @@ libcanister::canmem::canmem(const canmem &obj)
     data = new char[size];
     //cout << "copying canmem " << (void*)obj.data << " " << obj.data  << " into " << (void*)data << endl;
     memcpy(data, obj.data, size);
+#ifdef DEBUG
     addlink();
+#endif
 }
 
 libcanister::canmem& libcanister::canmem::operator=(const canmem &obj)
@@ -126,7 +135,9 @@ libcanister::canmem& libcanister::canmem::operator=(const canmem &obj)
     data = new char[size];
     //cout << "assignement/copying canmem " << (void*)obj.data << " " << obj.data  << " into " << (void*)data << endl;
     memcpy(data, obj.data, size);
+#ifdef DEBUG
     addlink();
+#endif
     return *this;
 }
 
@@ -139,6 +150,7 @@ libcanister::canmem::~canmem()
     //cout << endl;
     data = 0x0;
     size = -1;
+#ifdef DEBUG
     if (next != NULL)
         next->prev = prev;
     if (prev != NULL)
@@ -146,6 +158,7 @@ libcanister::canmem::~canmem()
     prev = NULL;
     next = NULL;
     // cout << "unlinked " << (void*)this << " from chain, " << countchain() << " nodes remain." << endl;
+#endif
 }
 
 void libcanister::canmem::zeromem()
