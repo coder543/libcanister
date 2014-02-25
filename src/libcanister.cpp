@@ -286,13 +286,17 @@ int libcanister::canister::close()
 
     canmem fspath = info.path;
     dout << "writing to file " << fspath.data << endl;
-    fstream filechecker;
-    filechecker.open(fspath.data, ios::out); //force the existence of the file
-    if (!filechecker.is_open())
-        return 1; // could not open file
-    filechecker.close();
     fstream infile;
     infile.open(fspath.data, ios::in | ios::out | ios::binary);
+    if (!infile.is_open())
+    { //create new file
+        fstream filechecker;
+        filechecker.open(fspath.data, ios::out);
+        if (!filechecker.is_open())
+            return 1; // could not open file
+        filechecker.close();
+        infile.open(fspath.data, ios::in | ios::out | ios::binary);
+    }
     infile.seekg(0, ios::beg);
     //write the header verification (c00)
 

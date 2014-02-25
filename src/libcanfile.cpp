@@ -162,8 +162,12 @@ void libcanister::canfile::cachedumpfinal(fstream& infile)
         else
             cmpdata = &data;
         dsize = cmpdata->size;
+        dout << "file is of size " << dsize << endl;
         //int id = readint32(infile);
         //readint32 (needed because fstream != ifstream)
+        for (int i = 0; i < cmpdata->size; i++)
+            dout << (int)cmpdata->data[i] << " ";
+        dout << endl;
         if (!infile.good())
         {
             unsigned char temp;

@@ -54,7 +54,7 @@ libcanister::canmem* bzipWrapper::compress(libcanister::canmem &rawdata, int ext
             }
             else
             {
-                libcanister::canmem* finaldata = new libcanister::canmem(compdatamax + 1);
+                libcanister::canmem* finaldata = new libcanister::canmem(rawdata.size + 1);
                 finaldata->data[0] = 0; //no compression because the "compressed" size was bigger
                 memcpy(finaldata->data + 1, rawdata.data, rawdata.size);
                 return finaldata;
@@ -69,7 +69,7 @@ libcanister::canmem* bzipWrapper::inflate(libcanister::canmem &compdata, int ext
     if (compdata.data[0] == 0) //no compression
     {
         libcanister::canmem* finaldata = new libcanister::canmem(compdata.size-1);
-        memcpy(finaldata->data, compdata.data, compdata.size-1);
+        memcpy(finaldata->data, compdata.data+1, compdata.size-1);
         return finaldata;
     }
     else if (compdata.data[0] == 1)
