@@ -1,4 +1,5 @@
 #include "libcanister.h"
+#undef DEBUG
 #ifdef DEBUG
 libcanister::canmem* libcanister::canmem::head;
 libcanister::canmem* libcanister::canmem::tail;

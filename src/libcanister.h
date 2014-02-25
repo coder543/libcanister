@@ -6,7 +6,7 @@
 #include <cstring>
 
 #define int64 unsigned long long
-//#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define dout cout

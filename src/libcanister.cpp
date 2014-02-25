@@ -278,17 +278,21 @@ libcanister::canister::~canister()
 }
 
 //flushes all caches and prepares for object deletion
-int libcanister::canister::close ()
+int libcanister::canister::close()
 {
     //don't do anything if readonly
     if (readonly)
-        return 0;
+        return 2;
 
     canmem fspath = info.path;
+    dout << "writing to file " << fspath.data << endl;
+    fstream filechecker;
+    filechecker.open(fspath.data, ios::out); //force the existence of the file
+    if (!filechecker.is_open())
+        return 1; // could not open file
+    filechecker.close();
     fstream infile;
     infile.open(fspath.data, ios::in | ios::out | ios::binary);
-    if (!infile.is_open())
-        cout << "Whoa there.." << endl;
     infile.seekg(0, ios::beg);
     //write the header verification (c00)
 
@@ -381,6 +385,7 @@ int libcanister::canister::close ()
     infile << ftloc[1];
     infile << ftloc[0];
     infile << (unsigned char)0x03; //c07
+    infile.close();
 
     //no other modifications to the canister should happen after this point
     //also prevents double closure from a manual close() call and the automated one
